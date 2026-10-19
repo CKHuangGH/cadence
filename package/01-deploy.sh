@@ -1,0 +1,57 @@
+export DEBIAN_FRONTEND=noninteractive
+
+sudo apt-get update
+
+sudo apt-get install -y screen=4.9.1-3
+sudo apt-get install -y chrony=4.6.1-3+deb13u1
+
+number=$(($(wc -l < cp_node_list) - 1))
+
+for i in `seq 0 $number`
+do
+    sed -i 's/kubernetes-admin/k8s-admin-cluster'$i'/g' ~/.kube/cluster$i
+    sed -i 's/name: kubernetes/name: cluster'$i'/g' ~/.kube/cluster$i
+    sed -i 's/cluster: kubernetes/cluster: cluster'$i'/g' ~/.kube/cluster$i
+done
+
+for i in `seq 0 $number`
+do
+    string=$string"/root/.kube/cluster$i:"
+done
+
+string=$string | sed "s/.$//g"
+KUBECONFIG=$string kubectl config view --flatten > ~/.kube/config
+
+for i in `seq 0 $number`
+do
+    kubectl config rename-context k8s-admin-cluster$i@kubernetes cluster$i
+done
+
+sleep 30
+
+while IFS= read -r ip_address; do
+  scp -o StrictHostKeyChecking=no ./all_node_list root@$ip_address:/root/
+  scp -o StrictHostKeyChecking=no ./script/chrony.sh root@$ip_address:/root/
+done < "all_node_list"
+
+while IFS= read -r ip_address; do
+  ssh -n -o StrictHostKeyChecking=no root@"$ip_address" sudo apt-get update
+  ssh -n -o StrictHostKeyChecking=no root@"$ip_address" mkdir /var/log/chrony
+  ssh -n -o StrictHostKeyChecking=no root@"$ip_address" sudo apt-get install -y chrony=4.6.1-3+deb13u1
+  ssh -n -o StrictHostKeyChecking=no root@"$ip_address" "nohup bash /root/chrony.sh 2>&1 &"
+done < "all_node_list"
+
+sleep 30
+
+cluster=1
+tail -n +2 cp_node_list > cp_node_list_without_management
+while read -r ip; do
+	scp -o StrictHostKeyChecking=no /root/.kube/config root@$ip:/root/.kube
+	ssh -n -o StrictHostKeyChecking=no root@$ip chmod 777 /root/camca/package/script/member_clusters.sh
+	ssh -n -o StrictHostKeyChecking=no root@$ip bash /root/camca/package/script/member_clusters.sh $cluster &
+	cluster=$((cluster+1))
+done < "cp_node_list_without_management"
+
+cp cp_node_list_without_management ./exps/motivation/cp_node_list_without_management
+
+sleep 30
