@@ -1,11 +1,11 @@
 [g5k]
 site = "rennes"
 cluster = "parasilo"
-duration = "02:00:00"
+duration = "03:00:00"
 number_servers = 1
 
 [vm]
-image = "/home/chuang/images/debian13-k8s-1.37.1.qcow2"
+image = "/home/chuang/images/k8s-1.37.1-debian13-50G.qcow2"
 
 [vm.control_plane]
 cpu = 8

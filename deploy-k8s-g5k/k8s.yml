@@ -33,7 +33,7 @@
   become: yes
   tasks:
     - name: initialize the cluster
-      shell: kubeadm init --kubernetes-version v1.36.2
+      shell: kubeadm init --kubernetes-version v1.37.1
 
     - name: create .kube directory
       become: yes
@@ -75,7 +75,7 @@
         helm repo add cilium https://helm.cilium.io/ || true
         helm repo update
         helm install cilium cilium/cilium \
-          --version 1.20.2 \
+          --version 1.20.3 \
           --namespace kube-system \
           --set operator.replicas=1 \
           --set operator.nodeSelector."node-role\.kubernetes\.io/control-plane"="" \
