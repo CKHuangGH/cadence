@@ -5,9 +5,13 @@ USER_NAME=$(whoami)
 
 rm -rf /home/$USER_NAME/.ssh/known_hosts
 
+git clone https://github.com/CKHuangGH/cadence
+
 for j in $(cat cp_node_list)
 do
     scp /home/$USER_NAME/.ssh/id_rsa root@$j:/root/.ssh
+	scp /home/$USER_NAME/cadence root@$j:/root/
+	ssh root@$j chmod -R 777 /root/cadence
 done
 
 total=15
@@ -32,4 +36,4 @@ done
 scp cp_node_list root@$manage:/root/cp_node_list
 scp all_node_list root@$manage:/root/all_node_list
 
-echo "Your Management Cluster Control Plane is $manage"
+echo "Your (Management) Cluster Control Plane is $manage"
