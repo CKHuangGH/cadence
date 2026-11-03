@@ -2,7 +2,7 @@
 site = "rennes"
 cluster = "parasilo"
 duration = "03:00:00"
-number_servers = 1
+number_servers = 5
 
 [vm]
 image = "/home/chuang/images/k8s-1.37.1-debian13-50G.qcow2"
@@ -12,7 +12,7 @@ cpu = 8
 memory = 16384
 
 [vm.worker]
-number = 1
+number = 6
 cpu = 8
 memory = 16384
 

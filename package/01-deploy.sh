@@ -27,7 +27,7 @@ do
     kubectl config rename-context k8s-admin-cluster$i@kubernetes cluster$i
 done
 
-sleep 30
+sleep 10
 
 while IFS= read -r ip_address; do
   scp -o StrictHostKeyChecking=no ./all_node_list root@$ip_address:/root/
@@ -40,18 +40,5 @@ while IFS= read -r ip_address; do
   ssh -n -o StrictHostKeyChecking=no root@"$ip_address" sudo apt-get install -y chrony=4.6.1-3+deb13u1
   ssh -n -o StrictHostKeyChecking=no root@"$ip_address" "nohup bash /root/chrony.sh 2>&1 &"
 done < "all_node_list"
-
-sleep 30
-
-cluster=1
-tail -n +2 cp_node_list > cp_node_list_without_management
-while read -r ip; do
-	scp -o StrictHostKeyChecking=no /root/.kube/config root@$ip:/root/.kube
-	ssh -n -o StrictHostKeyChecking=no root@$ip chmod 777 /root/camca/package/script/member_clusters.sh
-	ssh -n -o StrictHostKeyChecking=no root@$ip bash /root/camca/package/script/member_clusters.sh $cluster &
-	cluster=$((cluster+1))
-done < "cp_node_list_without_management"
-
-cp cp_node_list_without_management ./exps/motivation/cp_node_list_without_management
 
 sleep 30
