@@ -9,4 +9,8 @@ done
 
 kubectl config use-context cluster0
 
+kubectl top nodes
+
+kubectl get pods -n monitoring
+
 echo "screen -S mysession"

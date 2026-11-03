@@ -5,29 +5,10 @@ sudo apt-get update
 sudo apt-get install -y screen=4.9.1-3
 sudo apt-get install -y chrony=4.6.1-3+deb13u2
 
-number=$(($(wc -l < cp_node_list) - 1))
+sleep 5
 
-for i in `seq 0 $number`
-do
-    sed -i 's/kubernetes-admin/k8s-admin-cluster'$i'/g' ~/.kube/cluster$i
-    sed -i 's/name: kubernetes/name: cluster'$i'/g' ~/.kube/cluster$i
-    sed -i 's/cluster: kubernetes/cluster: cluster'$i'/g' ~/.kube/cluster$i
-done
-
-for i in `seq 0 $number`
-do
-    string=$string"/root/.kube/cluster$i:"
-done
-
-string=$string | sed "s/.$//g"
-KUBECONFIG=$string kubectl config view --flatten > ~/.kube/config
-
-for i in `seq 0 $number`
-do
-    kubectl config rename-context k8s-admin-cluster$i@kubernetes cluster$i
-done
-
-sleep 10
+cp /root/all_node_list .
+cp /root/cp_node_list .
 
 while IFS= read -r ip_address; do
   scp -o StrictHostKeyChecking=no ./all_node_list root@$ip_address:/root/
@@ -42,3 +23,33 @@ while IFS= read -r ip_address; do
 done < "all_node_list"
 
 sleep 30
+
+CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+MON=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o name | sort -V | tail -1 | cut -d/ -f2)
+
+kubectl label node "$CP" cadence-role=cp --overwrite
+kubectl label node "$MON" cadence-role=monitoring --overwrite
+
+helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+helm upgrade --install metrics-server metrics-server/metrics-server \
+  -n kube-system \
+  --set nodeSelector.cadence-role=cp \
+  --set 'tolerations[0].key=node-role.kubernetes.io/control-plane' \
+  --set 'tolerations[0].operator=Exists' \
+  --set 'tolerations[0].effect=NoSchedule' \
+  --set 'args[0]=--kubelet-insecure-tls' \
+  --wait --timeout 5m
+
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring --create-namespace \
+  --set grafana.enabled=false \
+  --set alertmanager.enabled=false \
+  --set prometheus.prometheusSpec.scrapeInterval=5s \
+  --set prometheus.prometheusSpec.scrapeTimeout=4s \
+  --set prometheus.prometheusSpec.nodeSelector.cadence-role=monitoring \
+  --set prometheusOperator.nodeSelector.cadence-role=monitoring \
+  --set kube-state-metrics.nodeSelector.cadence-role=monitoring \
+  --wait --timeout 10m
