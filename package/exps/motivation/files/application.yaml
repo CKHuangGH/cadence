@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cadence
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cadence-app
+  namespace: cadence
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cadence-app
+  template:
+    metadata:
+      labels:
+        app: cadence-app
+    spec:
+      nodeSelector:
+        cadence-role: application
+      containers:
+        - name: app
+          image: registry.k8s.io/hpa-example
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadence-app
+  namespace: cadence
+spec:
+  selector:
+    app: cadence-app
+  ports:
+    - port: 80
+      targetPort: 80

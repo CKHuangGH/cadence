@@ -26,9 +26,15 @@ sleep 30
 
 CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
 MON=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o name | sort -V | tail -1 | cut -d/ -f2)
+LOAD=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o name | sort -V | tail -2 | head -1 | cut -d/ -f2)
 
 kubectl label node "$CP" cadence-role=cp --overwrite
 kubectl label node "$MON" cadence-role=monitoring --overwrite
+kubectl label node "$LOAD" cadence-role=loadgen --overwrite
+
+for NODE in $(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o name | sort -V | head -n -2); do
+  kubectl label "$NODE" cadence-role=application --overwrite
+done
 
 helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
